@@ -14,7 +14,7 @@ class StackCrawlerSpider(CrawlSpider):
     ]
 
     rules = (
-        Rule(LinkExtractor(allow=r'question\?page=[0-9]&sort=frequent'),
+        Rule(LinkExtractor(allow=r'questions\?page=[0-9]&sort=frequent'),
              callback='parse_item', follow=True),
     )
 
