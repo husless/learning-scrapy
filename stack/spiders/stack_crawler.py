@@ -19,12 +19,28 @@ class StackCrawlerSpider(CrawlSpider):
     )
 
     def parse_item(self, response):
-        questions = response.xpath('//div[@class="summary"]/h3')
+        questions = response.xpath('//div[@class="question-summary"]')
 
         for question in questions:
             item = StackItem()
             item['title'] = question.xpath(
-                'a[@class="question-hyperlink"]/text()').extract()[0]
+                'div/h3/a[@class="question-hyperlink"]/text()').extract()[0]
             item['url'] = question.xpath(
-                'a[@class="question-hyperlink"]/@href').extract()[0]
+                'div/h3/a[@class="question-hyperlink"]/@href').extract()[0]
+            item['tags'] = question.xpath(
+                 'div/div/a[@class="post-tag"]/text()').extract()
+            votes = question.xpath(
+                'div/div/div[@class="vote"]/div/span/strong/text()'
+            ).extract()[0]
+            votes = int(votes)
+            answers = question.xpath(
+                 'div/div/div[@class="status answered-accepted"]/strong/text()'
+            ).extract()
+            answers = int(answers[0]) if answers else 0
+            views = question.xpath(
+                'div/div[@class="views supernova"]/@title'
+            ).extract()
+            views = int(''.join(views[0][:-6].split(','))) if views else 0
+            item['status'] = dict(votes=votes, answers=answers, views=views)
             yield item
+

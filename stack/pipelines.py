@@ -29,8 +29,7 @@ class MongoDBPipeline(object):
         if valid:
             self.collection.update({'url': item['url']},
                                    dict(item), upsert=True)
-            logging.log(logging.INFO, 'Question added to MongoDB database!',
-                    spider=spider)
+            logging.log(logging.INFO, 'Question added to MongoDB database!')
         return item
 
 
