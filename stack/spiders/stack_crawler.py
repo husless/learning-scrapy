@@ -3,14 +3,12 @@ import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 
-from stack.items import StackItem
-
 
 class StackCrawlerSpider(CrawlSpider):
     name = 'stack_crawler'
     allowed_domains = ['stackoverflow.com']
     start_urls = [
-        'http://stackoverflow.com/questions?pagesize=50&sort=frequent'
+        'http://stackoverflow.com/questions?sort=frequent'
     ]
 
     rules = (
@@ -18,29 +16,24 @@ class StackCrawlerSpider(CrawlSpider):
              callback='parse_item', follow=True),
     )
 
+    def parse(self, response):
+        for href in response.xpath('//div[@class="question-summary"]'):
+            url = response.urljoin(href.xpath('div/h3/a/@href').extract()[0])
+            yield scrapy.Request(url, callback=self.parse_item)
+
     def parse_item(self, response):
-        questions = response.xpath('//div[@class="question-summary"]')
-
-        for question in questions:
-            item = StackItem()
-            item['title'] = question.xpath(
-                'div/h3/a[@class="question-hyperlink"]/text()').extract()[0]
-            item['url'] = question.xpath(
-                'div/h3/a[@class="question-hyperlink"]/@href').extract()[0]
-            item['tags'] = question.xpath(
-                 'div/div/a[@class="post-tag"]/text()').extract()
-            votes = question.xpath(
-                'div/div/div[@class="vote"]/div/span/strong/text()'
-            ).extract()[0]
-            votes = int(votes)
-            answers = question.xpath(
-                 'div/div/div[@class="status answered-accepted"]/strong/text()'
-            ).extract()
-            answers = int(answers[0]) if answers else 0
-            views = question.xpath(
-                'div/div[@class="views supernova"]/@title'
-            ).extract()
-            views = int(''.join(views[0][:-6].split(','))) if views else 0
-            item['status'] = dict(votes=votes, answers=answers, views=views)
-            yield item
-
+        yield {
+            'title': response.xpath('//h1/a/text()').extract()[0],
+            'url': response.url,
+            'tags': response.xpath('//a[@class="post-tag"]/text()').extract(),
+            'status': {
+                'votes': response.xpath(
+                    '//div[@class="vote"]/span/text()').extract()[0],
+                'favorite_count': response.xpath(
+                    '//div[@class="favoritecount"]/b/text()').extract()[0],
+                'answers': response.xpath(
+                    '//span[@itemprop="answerCount"]/text()').extract()[0],
+                'views': response.xpath(
+                    '//td/p[@class="label-key"]/b/text()').extract()[1][:-6],
+            },
+        }
